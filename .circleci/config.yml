@@ -1,0 +1,25 @@
+version: 2
+
+jobs:
+
+  build:
+    machine:
+      image: ubuntu-2204:2023.07.1
+    resource_class: arm.medium
+    working_directory: ~/repo
+    environment:
+      GRAALVM_HOME: /home/circleci/repo/.graalvm
+    steps:
+      - checkout
+      - run:
+          name: Build and push Docker Image to Dockerhub
+          command: |
+            docker build -t hablijack/reverse_proxy:1.8.0 .
+            echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker push hablijack/greenhouse-backend:1.8.0
+
+workflows:
+  version: 2
+  qualitygate_and_build:
+    jobs:
+      - build
