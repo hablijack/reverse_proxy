@@ -16,7 +16,7 @@ jobs:
           command: |
             docker build -t hablijack/reverse_proxy:1.8.0 .
             echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            docker push hablijack/greenhouse-backend:1.8.0
+            docker push hablijack/reverse_proxy:1.8.0
 
 workflows:
   version: 2
