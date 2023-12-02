@@ -19,6 +19,6 @@ jobs:
 
 workflows:
   version: 2
-  qualitygate_and_build:
+  qualitygate_a0nd_build:
     jobs:
       - build
