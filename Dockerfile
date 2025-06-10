@@ -4,8 +4,8 @@ FROM nginx:1.27.5-alpine
 RUN apk add certbot certbot-nginx
 
 # ADD DUMMY CERTS
-RUN mkdir -p /etc/letsencrypt/live/greenhouse.home-webserver.de
-COPY dummy_certs/* /etc/letsencrypt/live/greenhouse.home-webserver.de/
+RUN mkdir -p /etc/letsencrypt/live/garden.dedyn.io
+COPY dummy_certs/* /etc/letsencrypt/live/garden.dedyn.io/
 
 # ADD ENTRYPOINT SCRIPT
 COPY entrypoint.sh /etc/nginx/entrypoint.sh

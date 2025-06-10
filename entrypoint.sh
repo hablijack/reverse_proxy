@@ -11,7 +11,7 @@ else
 
   # INITIALIZE LETSENCRYPT
   rm -rf /etc/letsencrypt/live
-  /usr/bin/certbot certonly -n --webroot -w /var/www/certbot --email christoph.habel@posteo.de -d greenhouse.home-webserver.de --rsa-key-size 4096 --agree-tos --force-renewal
+  /usr/bin/certbot certonly -n --webroot -w /var/www/certbot --email christoph.habel@posteo.de -d garden.dedyn.io --rsa-key-size 4096 --agree-tos --force-renewal
 
   # STOP BACKGROUND NGINX PROCESS
   killall nginx
