@@ -1,4 +1,4 @@
-FROM nginx:1.27.5-alpine
+FROM nginx:1.29.0-alpine
 
 # INSTALL CERTBOT
 RUN apk add certbot certbot-nginx
@@ -13,6 +13,9 @@ RUN chmod a+x /etc/nginx/entrypoint.sh
 
 # NGINX CONFIG
 COPY app.conf /etc/nginx/conf.d/app.conf
+
+# CREATE HTPASS FOR BASIC-AUTH-ACCESS
+RUN echo $BASIC_AUTH_USER > /etc/nginx/htpasswd
 
 # CREATE WEBROOT FOR CERTBOT
 RUN mkdir -p /var/www/certbot
