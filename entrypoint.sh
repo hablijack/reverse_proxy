@@ -2,6 +2,10 @@
 
 # MANAGE LETSENCRYPT
 DIR="/etc/letsencrypt/archive"
+
+# CREATE HTPASS FOR BASIC-AUTH-ACCESS
+echo $BASIC_AUTH_USER > /etc/nginx/htpasswd
+
 if [ -d "$DIR" ]; then
   # RENEW CERTIFICATES
   /usr/bin/certbot renew
