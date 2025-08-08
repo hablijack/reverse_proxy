@@ -4,7 +4,7 @@
 DIR="/etc/letsencrypt/archive"
 
 # CREATE HTPASS FOR BASIC-AUTH-ACCESS
-echo $BASIC_AUTH_USER | base64 --decode > /etc/nginx/htpasswd
+echo $BASIC_AUTH_USER | base64 -d > /etc/nginx/htpasswd
 
 if [ -d "$DIR" ]; then
   # RENEW CERTIFICATES
