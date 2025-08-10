@@ -18,7 +18,8 @@ else
   /usr/bin/certbot certonly -n --webroot -w /var/www/certbot --email christoph.habel@posteo.de -d garden.dedyn.io --rsa-key-size 4096 --agree-tos --force-renewal
 
   # STOP BACKGROUND NGINX PROCESS
-  killall nginx
+  kill -9 $(pidof nginx)
+  echo "hello2"
 fi
 
 # START NGINX IN FOREGROUND AND RUN FOREVER
