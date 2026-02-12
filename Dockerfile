@@ -1,4 +1,4 @@
-FROM nginx:1.29.0-alpine
+FROM nginx:1.29.5-alpine
 
 # INSTALL CERTBOT
 RUN apk add certbot certbot-nginx
