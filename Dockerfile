@@ -21,7 +21,8 @@ RUN chmod a+x /etc/nginx/entrypoint.sh
 COPY app.conf /etc/nginx/conf.d/app.conf
 COPY bewerbung.conf /etc/nginx/conf.d/bewerbung.conf
 
-# CREATE WEBROOT FOR CERTBOT
-RUN mkdir -p /var/www/certbot
+# CREATE WEBROOT FOR CERTBOT (inkl. ACME-Challenge-Verzeichnis, das
+# certbot für die HTTP-01-Challenge benötigt)
+RUN mkdir -p /var/www/certbot/.well-known/acme-challenge
 
 CMD ["/etc/nginx/entrypoint.sh"]

@@ -42,5 +42,12 @@ if [ ! -f "$LIVE_DIR/fullchain.pem" ] || [ ! -f "$LIVE_DIR/privkey.pem" ]; then
   cp -a "$DUMMY_DIR/." "$LIVE_DIR/"
 fi
 
+# ACME-Webroot: Challenge-Verzeichnis sicherstellen. certbot legt die
+# HTTP-01-Challenge-Dateien unter <webroot>/.well-known/acme-challenge/
+# ab — das Verzeichnis muss existieren, damit die Webroot-Issuance
+# funktioniert (idempotent; deckt auch bestehende Volumes ab, die es
+# noch nicht enthalten).
+mkdir -p /var/www/certbot/.well-known/acme-challenge
+
 # NGINX IM VORDERGRUND STARTEN (läuft forever)
 exec nginx -g 'daemon off;'
