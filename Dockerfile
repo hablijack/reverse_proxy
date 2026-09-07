@@ -1,4 +1,4 @@
-FROM nginx:1.29.5-alpine
+FROM nginx:1.30.4-alpine
 
 # INSTALL CERTBOT
 RUN apk add certbot certbot-nginx
@@ -13,6 +13,7 @@ RUN chmod a+x /etc/nginx/entrypoint.sh
 
 # NGINX CONFIG
 COPY app.conf /etc/nginx/conf.d/app.conf
+COPY bewerbung.conf /etc/nginx/conf.d/bewerbung.conf
 
 # CREATE WEBROOT FOR CERTBOT
 RUN mkdir -p /var/www/certbot
