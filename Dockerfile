@@ -4,8 +4,14 @@ FROM nginx:1.30.4-alpine
 RUN apk add certbot certbot-nginx
 
 # ADD DUMMY CERTS
-RUN mkdir -p /etc/letsencrypt/live/garden.dedyn.io
+# - /etc/letsencrypt/live/... : bei einem LEEREN Volume von Docker in das
+#   Volume kopiert (Erststart).
+# - /opt/dummy-certs/ : sichere Kopie, die NICHT vom /etc/letsencrypt-Volume
+#   verdeckt wird — der Entrypoint stellt daraus das Zertifikat wieder her,
+#   wenn das Volume leer/beschädigt ist.
+RUN mkdir -p /etc/letsencrypt/live/garden.dedyn.io /opt/dummy-certs
 COPY dummy_certs/* /etc/letsencrypt/live/garden.dedyn.io/
+COPY dummy_certs/* /opt/dummy-certs/
 
 # ADD ENTRYPOINT SCRIPT
 COPY entrypoint.sh /etc/nginx/entrypoint.sh
