@@ -1,28 +1,35 @@
 FROM nginx:1.30.4-alpine
 
-# INSTALL CERTBOT
-RUN apk add certbot certbot-nginx
+# Sicherheitsupdates des Basis-Images einspielen, certbot (manuelle
+# Issuance) + openssl (Dummy-Zertifikat im Entrypoint) installieren
+RUN apk upgrade --no-cache \
+ && apk add --no-cache certbot certbot-nginx openssl
 
-# ADD DUMMY CERTS
-# - /etc/letsencrypt/live/... : bei einem LEEREN Volume von Docker in das
-#   Volume kopiert (Erststart).
-# - /opt/dummy-certs/ : sichere Kopie, die NICHT vom /etc/letsencrypt-Volume
-#   verdeckt wird — der Entrypoint stellt daraus das Zertifikat wieder her,
-#   wenn das Volume leer/beschädigt ist.
-RUN mkdir -p /etc/letsencrypt/live/garden.dedyn.io /opt/dummy-certs
-COPY dummy_certs/* /etc/letsencrypt/live/garden.dedyn.io/
-COPY dummy_certs/* /opt/dummy-certs/
+# Standard-Site des nginx-Images entfernen (Welcome-Seite, antwortete auf
+# beliebige Host-Header inkl. Versions-Banner)
+RUN rm -f /etc/nginx/conf.d/default.conf \
+ && rm -rf /usr/share/nginx/html/*
+
+# Zertifikats-Verzeichnis anlegen. Das Dummy-Zertifikat wird NICHT mehr
+# mitgeliefert, sondern beim Start mit frischem Schlüssel erzeugt
+# (siehe entrypoint.sh) — ein Schlüssel im öffentlichen Repo/Image wäre
+# für jeden bekannt.
+RUN mkdir -p /etc/letsencrypt/live/garden.dedyn.io \
+ && chmod 700 /etc/letsencrypt/live
 
 # ADD ENTRYPOINT SCRIPT
 COPY entrypoint.sh /etc/nginx/entrypoint.sh
-RUN chmod a+x /etc/nginx/entrypoint.sh
+RUN chmod 755 /etc/nginx/entrypoint.sh
 
-# NGINX CONFIG
+# NGINX CONFIG (00-hardening.conf zuerst: globale Härtung + Catch-All)
+COPY 00-hardening.conf /etc/nginx/conf.d/00-hardening.conf
 COPY app.conf /etc/nginx/conf.d/app.conf
 COPY bewerbung.conf /etc/nginx/conf.d/bewerbung.conf
 
 # CREATE WEBROOT FOR CERTBOT (inkl. ACME-Challenge-Verzeichnis, das
 # certbot für die HTTP-01-Challenge benötigt)
 RUN mkdir -p /var/www/certbot/.well-known/acme-challenge
+
+STOPSIGNAL SIGQUIT
 
 CMD ["/etc/nginx/entrypoint.sh"]
