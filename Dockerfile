@@ -10,16 +10,15 @@ RUN apk upgrade --no-cache \
 RUN rm -f /etc/nginx/conf.d/default.conf \
  && rm -rf /usr/share/nginx/html/*
 
-# Zertifikats-Verzeichnis anlegen. Das Dummy-Zertifikat wird NICHT mehr
-# mitgeliefert, sondern beim Start mit frischem Schlüssel erzeugt
-# (siehe entrypoint.sh) — ein Schlüssel im öffentlichen Repo/Image wäre
-# für jeden bekannt.
-RUN mkdir -p /etc/letsencrypt/live/garden.dedyn.io \
- && chmod 700 /etc/letsencrypt/live
-
-# ADD ENTRYPOINT SCRIPT
+# Zertifikate: /etc/letsencrypt gehört allein certbot (Volume, im Image
+# bewusst LEER — sonst kopiert Docker Inhalte ins neue Volume und certbot
+# weicht auf "-0001"-Reihen aus). nginx liest /etc/nginx/ssl/, das
+# select-cert beim Start verlinkt (LE-Zertifikat oder Dummy mit frischem
+# Schlüssel, der nie im Repo/Image liegt).
+COPY select-cert.sh /usr/local/bin/select-cert
 COPY entrypoint.sh /etc/nginx/entrypoint.sh
-RUN chmod 755 /etc/nginx/entrypoint.sh
+RUN chmod 755 /usr/local/bin/select-cert /etc/nginx/entrypoint.sh \
+ && mkdir -p /etc/nginx/ssl && chmod 700 /etc/nginx/ssl
 
 # NGINX CONFIG (00-hardening.conf zuerst: globale Härtung + Catch-All)
 COPY 00-hardening.conf /etc/nginx/conf.d/00-hardening.conf

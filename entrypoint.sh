@@ -3,30 +3,27 @@
 # =============================================================================
 # Entrypoint: nginx-Start (einfach + selbstheilend)
 #
-# - KEIN automatischer Let's-Encrypt-Verkehr: keine ACME-Challenge, keine
-#   automatische Erneuerung. Das Zertifikat wird MANUELL beantragt.
-# - Fehlt das Zertifikat im Volume (Erststart oder leer/beschädigtes
-#   Volume), wird ein selbstsigniertes Dummy-Zertifikat mit FRISCH
-#   erzeugtem Schlüssel angelegt, damit nginx sauber starten kann (kein
-#   Crash-Loop). Es wird bewusst kein Schlüssel im Image/Repo mitgeliefert
-#   (der wäre öffentlich bekannt).
+# - KEIN automatischer Let's-Encrypt-Verkehr beim Start. Ausstellung und
+#   Erneuerung werden manuell (oder per Host-Cron) angestoßen.
+# - nginx liest das Zertifikat aus /etc/nginx/ssl/. select-cert verlinkt
+#   dorthin das Let's-Encrypt-Zertifikat aus dem Volume — oder, falls
+#   keines da ist, ein im Container erzeugtes Dummy-Zertifikat. Das
+#   Let's-Encrypt-Volume bleibt dabei unangetastet (certbot gehört es
+#   allein, dadurch entstehen keine "-0001"-Reihen mehr).
+# - Ein certbot-Deploy-Hook verlinkt nach jeder Ausstellung/Erneuerung
+#   neu und lädt nginx automatisch neu.
 #
-# Manuelle Zertifikats-Issuance (nach dem Start, sobald die
-# Let's-Encrypt-Rate-Limits für die Domain abgelaufen sind):
+# Erstmalige Ausstellung (im laufenden Container):
 #
-#   docker exec -it reverse-proxy sh
-#   certbot certonly --webroot -w /var/www/certbot \
-#     --email christoph.habel@posteo.de -d garden.dedyn.io \
-#     --rsa-key-size 4096 --agree-tos --force-renewal
-#   nginx -s reload
+#   docker exec -it reverse-proxy certbot certonly --webroot \
+#     -w /var/www/certbot --cert-name garden.dedyn.io -d garden.dedyn.io \
+#     --email <deine-adresse> --agree-tos
 #
-#   (certonly registriert bei Bedarf automatisch das LE-Konto und legt
-#   ein Renewal-Config an; spätere Erneuerungen laufen dann über
-#   'certbot renew'.)
+# Erneuerung (erneuert nur, wenn < 30 Tage Restlaufzeit; nginx wird vom
+# Hook automatisch neu geladen) — z. B. wöchentlich per Host-Cron:
+#
+#   docker exec reverse-proxy certbot renew -q
 # =============================================================================
-
-DOMAIN="garden.dedyn.io"
-LIVE_DIR="/etc/letsencrypt/live/$DOMAIN"
 
 set -eu
 
@@ -37,29 +34,23 @@ if [ -n "${BASIC_AUTH_USER:-}" ]; then
   chown root:nginx /etc/nginx/htpasswd
 fi
 
-# Zertifikat fehlt (Erststart / leer oder beschädigtes Volume) ->
-# Dummy-Zertifikat aus dem Image wiederherstellen, damit nginx starten kann.
-if [ ! -s "$LIVE_DIR/fullchain.pem" ] || [ ! -s "$LIVE_DIR/privkey.pem" ]; then
-  echo "Kein (vollstaendiges) Zertifikat in $LIVE_DIR —"
-  echo "selbstsigniertes Dummy-Zertifikat wird erzeugt (nginx laeuft damit,"
-  echo "bis ein echtes Let's-Encrypt-Zertifikat manuell beantragt wird)."
-  mkdir -p "$LIVE_DIR"
-  rm -f "$LIVE_DIR/fullchain.pem" "$LIVE_DIR/privkey.pem" "$LIVE_DIR/chain.pem"
-  ( umask 077 && openssl req -x509 -nodes -newkey rsa:2048 -sha256 -days 90 \
-      -subj "/CN=$DOMAIN" -addext "subjectAltName=DNS:$DOMAIN" \
-      -keyout "$LIVE_DIR/privkey.pem" -out "$LIVE_DIR/fullchain.pem" 2>/dev/null )
-  cp "$LIVE_DIR/fullchain.pem" "$LIVE_DIR/chain.pem"
-  chmod 644 "$LIVE_DIR/fullchain.pem" "$LIVE_DIR/chain.pem"
-fi
+# certbot-Deploy-Hook ins Volume legen (idempotent, bei jedem Start
+# aktualisiert): nach erfolgreicher Ausstellung/Erneuerung Zertifikat
+# neu verlinken und nginx neu laden.
+HOOK_DIR=/etc/letsencrypt/renewal-hooks/deploy
+mkdir -p "$HOOK_DIR"
+cat > "$HOOK_DIR/reload-nginx.sh" <<'EOF'
+#!/bin/sh
+# Verwaltet vom reverse_proxy-Image (wird beim Containerstart überschrieben)
+/usr/local/bin/select-cert && nginx -s reload
+EOF
+chmod 755 "$HOOK_DIR/reload-nginx.sh"
 
-# Private Key darf nur root lesen (nginx-Master liest ihn als root)
-chmod 600 "$LIVE_DIR/privkey.pem" 2>/dev/null || true
+# Zertifikat auswählen und nach /etc/nginx/ssl/ verlinken
+/usr/local/bin/select-cert
 
-# ACME-Webroot: Challenge-Verzeichnis sicherstellen. certbot legt die
-# HTTP-01-Challenge-Dateien unter <webroot>/.well-known/acme-challenge/
-# ab — das Verzeichnis muss existieren, damit die Webroot-Issuance
-# funktioniert (idempotent; deckt auch bestehende Volumes ab, die es
-# noch nicht enthalten).
+# ACME-Webroot: Challenge-Verzeichnis sicherstellen (idempotent; deckt
+# auch bestehende Volumes ab, die es noch nicht enthalten).
 mkdir -p /var/www/certbot/.well-known/acme-challenge
 
 # NGINX IM VORDERGRUND STARTEN (läuft forever)
