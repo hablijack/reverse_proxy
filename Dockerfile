@@ -1,4 +1,4 @@
-FROM nginx:1.30.4-alpine
+FROM nginx:1.30.7-alpine
 
 # Sicherheitsupdates des Basis-Images einspielen, certbot (manuelle
 # Issuance) + openssl (Dummy-Zertifikat im Entrypoint) installieren
